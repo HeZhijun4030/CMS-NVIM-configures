@@ -8,28 +8,69 @@ require('config.alpha')
 require("ibl").setup()
 require('neo-tree').setup()
 
-local cmp = require('cmp')
-local luasnip = require('luasnip')
 
 -- 加载友好代码片段
 require('luasnip.loaders.from_vscode').lazy_load()
+local cmp = require'cmp'
+local luasnip = require'luasnip'
+
+-- 只在 lspkind 可用时加载
+local lspkind_status, lspkind = pcall(require, 'lspkind')
+local formatting = {}
+
+if lspkind_status then
+  formatting.format = lspkind.cmp_format({
+    mode = 'symbol_text',
+    maxwidth = 50,
+    ellipsis_char = '...',
+    before = function(entry, vim_item)
+      vim_item.menu = ({
+        nvim_lsp = '[LSP]',
+        luasnip = '[Snippet]',
+        buffer = '[Buffer]',
+        path = '[Path]',
+        nvim_lua = '[Lua]',
+      })[entry.source.name]
+      return vim_item
+    end
+  })
+else
+  formatting = {
+    fields = {'abbr', 'kind', 'menu'},
+    format = function(entry, vim_item)
+      vim_item.menu = ({
+        nvim_lsp = '[LSP]',
+        luasnip = '[Snippet]',
+        buffer = '[Buffer]',
+        path = '[Path]',
+        nvim_lua = '[Lua]',
+      })[entry.source.name]
+      return vim_item
+    end
+  }
+end
 
 cmp.setup({
   snippet = {
     expand = function(args)
-      luasnip.lsp_expand(args.body) -- 使用 LuaSnip 展开片段
+      luasnip.lsp_expand(args.body)
     end,
   },
+  sources = cmp.config.sources({
+    { name = 'nvim_lsp' },
+    { name = 'luasnip' },
+    { name = 'buffer' },
+    { name = 'path' },
+    { name = 'nvim_lua' },
+  }),
   mapping = cmp.mapping.preset.insert({
-    ['<C-b>'] = cmp.mapping.scroll_docs(-4), -- 向上滚动文档
-    ['<C-f>'] = cmp.mapping.scroll_docs(4),  -- 向下滚动文档
-    ['<C-Space>'] = cmp.mapping.complete(),  -- 触发补全
-    ['<C-e>'] = cmp.mapping.abort(),        -- 关闭补全窗口
-    ['<CR>'] = cmp.mapping.confirm({       -- 确认选择
-      behavior = cmp.ConfirmBehavior.Replace,
-      select = true,
-    }),
-    -- Tab 键导航
+    ['<C-b>'] = cmp.mapping.scroll_docs(-4),
+    ['<C-f>'] = cmp.mapping.scroll_docs(4),
+    ['<C-Space>'] = cmp.mapping.complete(),
+    ['<C-e>'] = cmp.mapping.abort(),
+    ['<CR>'] = cmp.mapping.confirm({ select = true }), -- 回车确认补全
+    
+    -- 超级Tab功能
     ['<Tab>'] = cmp.mapping(function(fallback)
       if cmp.visible() then
         cmp.select_next_item()
@@ -39,6 +80,7 @@ cmp.setup({
         fallback()
       end
     end, { 'i', 's' }),
+    
     ['<S-Tab>'] = cmp.mapping(function(fallback)
       if cmp.visible() then
         cmp.select_prev_item()
@@ -49,36 +91,8 @@ cmp.setup({
       end
     end, { 'i', 's' }),
   }),
-  sources = cmp.config.sources({
-    { name = 'nvim_lsp' },   -- LSP 补全
-    { name = 'luasnip' },    -- 代码片段补全
-    { name = 'buffer' },     -- 缓冲区文本补全
-    { name = 'path' },       -- 文件路径补全
-  }),
-  -- 可选：添加补全项图标
-  formatting = {
-    format = require('lspkind').cmp_format({
-      mode = 'symbol_text',
-      maxwidth = 50,
-      ellipsis_char = '...',
-    })
-  }
+  formatting = formatting,  -- 使用上面定义的格式化配置
+  experimental = {
+    ghost_text = true,
+  },
 })
-
--- `/` 搜索时的补全
-cmp.setup.cmdline('/', {
-    mapping = cmp.mapping.preset.cmdline(),
-    sources = {
-      { name = 'buffer' }
-    }
-  })
-  
-  -- `:` 命令时的补全
-  cmp.setup.cmdline(':', {
-    mapping = cmp.mapping.preset.cmdline(),
-    sources = cmp.config.sources({
-      { name = 'path' }
-    }, {
-      { name = 'cmdline' }
-    })
-  })

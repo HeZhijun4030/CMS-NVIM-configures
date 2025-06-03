@@ -38,7 +38,6 @@ return require('packer').startup(function(use)
 
   use 'nvim-treesitter/nvim-treesitter'
   use 'lukas-reineke/indent-blankline.nvim'
-  
 --more
   -- 语法高亮
   use {

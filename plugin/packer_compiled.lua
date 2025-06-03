@@ -145,6 +145,11 @@ _G.packer_plugins = {
     path = "D:\\neovim\\custom\\data\\nvim-data\\site\\pack\\packer\\start\\neo-tree.nvim",
     url = "https://github.com/nvim-neo-tree/neo-tree.nvim"
   },
+  ["nui.nvim"] = {
+    loaded = true,
+    path = "D:\\neovim\\custom\\data\\nvim-data\\site\\pack\\packer\\start\\nui.nvim",
+    url = "https://github.com/MunifTanjim/nui.nvim"
+  },
   ["null-ls.nvim"] = {
     loaded = true,
     path = "D:\\neovim\\custom\\data\\nvim-data\\site\\pack\\packer\\start\\null-ls.nvim",
