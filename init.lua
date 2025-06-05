@@ -96,3 +96,37 @@ cmp.setup({
     ghost_text = true,
   },
 })
+
+local lspconfig = require('lspconfig')
+
+
+
+
+
+require('mason').setup()
+require('mason-lspconfig').setup({
+  automatic_installation = true,
+})
+
+-- 独立配置 LSP（新版不再需要 setup_handlers）
+
+local capabilities = require('cmp_nvim_lsp').default_capabilities()
+require('lspconfig').clangd.setup({
+  cmd = {
+    'D:/neovim/custom/clangd/bin/clangd.exe',  -- 替换为你的实际路径
+    '--background-index',
+    '--clang-tidy',
+  },
+  capabilities = require('cmp_nvim_lsp').default_capabilities(),
+})
+local lspconfig = require('lspconfig')
+-- 通用配置
+local default_setup = function(server)
+  lspconfig[server].setup({
+    capabilities = capabilities,
+  })
+end
+
+
+
+

@@ -36,7 +36,7 @@ return require('packer').startup(function(use)
     }
   })
 
-  use 'nvim-treesitter/nvim-treesitter'
+  
   use 'lukas-reineke/indent-blankline.nvim'
 --more
   -- 语法高亮
@@ -59,8 +59,9 @@ return require('packer').startup(function(use)
   -- 自动配对
   use 'windwp/nvim-autopairs'
 
-  -- 缩进线
-  use 'lukas-reineke/indent-blankline.nvim'
+  use 'williamboman/mason.nvim'
+  use 'williamboman/mason-lspconfig.nvim'  
+
   
 
 
@@ -76,5 +77,5 @@ return require('packer').startup(function(use)
   use 'L3MON4D3/LuaSnip'         -- 代码片段引擎
   use 'onsails/lspkind.nvim'
   use 'rafamadriz/friendly-snippets' -- 预设片段集合
-
+  use 'neovim/nvim-lspconfig' 
 end)
