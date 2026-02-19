@@ -1,14 +1,29 @@
 require('plugins')
-
 vim.opt.termguicolors = true
 
--- UI 配置
 require("bufferline").setup()
 vim.cmd[[colorscheme tokyonight-night]]
 require('config.lualine')
 require('config.alpha')
 require("ibl").setup()
-require('neo-tree').setup()
+
+-- neo-tree 最小配置
+require('neo-tree').setup({
+  close_if_last_window = true,
+  popup_border_style = "rounded",
+  enable_git_status = true,
+  enable_diagnostics = true,
+  default_component_configs = {
+    indent = {
+      with_expanders = true,
+    },
+    icon = {
+      folder_closed = "",
+      folder_open = "",
+      folder_empty = "",
+    },
+  },
+})
 
 -- 加载友好代码片段
 require('luasnip.loaders.from_vscode').lazy_load()
@@ -69,7 +84,7 @@ cmp.setup({
     ['<C-f>'] = cmp.mapping.scroll_docs(4),
     ['<C-Space>'] = cmp.mapping.complete(),
     ['<C-e>'] = cmp.mapping.abort(),
-    ['<CR>'] = cmp.mapping.confirm({ select = true }),
+    ['<CR>'] = cmp.mapping.confirm({ select = true }), -- 回车确认补全
 
     -- 超级Tab功能
     ['<Tab>'] = cmp.mapping(function(fallback)
@@ -106,15 +121,52 @@ require('mason-lspconfig').setup({
 
 -- LSP 通用能力配置
 local capabilities = require('cmp_nvim_lsp').default_capabilities()
-local lspconfig = require('lspconfig')
 
--- 通用配置函数
-local function setup_lsp(server, custom_opts)
-  local opts = vim.tbl_deep_extend("force", {
-    capabilities = capabilities,
-  }, custom_opts or {})
-  lspconfig[server].setup(opts)
-end
+-- 使用新的 vim.lsp.config API（替代 lspconfig）
+-- 配置 clangd
+vim.lsp.config.clangd = {
+  cmd = { "clangd" },
+  root_markers = { '.git', 'compile_commands.json', 'CMakeLists.txt' },
+  filetypes = { 'c', 'cpp', 'objc', 'objcpp' },
+  capabilities = capabilities,
+  init_options = {
+    usePlaceholders = true,
+    completeUnimported = true,
+    clangdFileStatus = true,
+  },
+  on_attach = function(client, bufnr)
+    local bufopts = { noremap=true, silent=true, buffer=bufnr }
+    vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, bufopts)
+    vim.keymap.set('n', 'gd', vim.lsp.buf.definition, bufopts)
+    vim.keymap.set('n', 'K', vim.lsp.buf.hover, bufopts)
+    vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, bufopts)
+    vim.keymap.set('n', 'gr', vim.lsp.buf.references, bufopts)
+    vim.keymap.set('n', '<space>rn', vim.lsp.buf.rename, bufopts)
+    vim.keymap.set('n', '<space>ca', vim.lsp.buf.code_action, bufopts)
+  end,
+}
+
+-- 启用 clangd
+vim.lsp.enable('clangd')
+
+-- 可选：配置其他 LSP 服务器
+-- Python
+vim.lsp.config.pylsp = {
+  cmd = { 'pylsp' },
+  root_markers = { 'pyproject.toml', 'setup.py', 'requirements.txt', '.git' },
+  filetypes = { 'python' },
+  capabilities = capabilities,
+}
+vim.lsp.enable('pylsp')
+
+-- TypeScript/JavaScript
+vim.lsp.config.tsserver = {
+  cmd = { 'typescript-language-server', '--stdio' },
+  root_markers = { 'package.json', 'tsconfig.json', 'jsconfig.json', '.git' },
+  filetypes = { 'typescript', 'javascript', 'typescriptreact', 'javascriptreact' },
+  capabilities = capabilities,
+}
+vim.lsp.enable('tsserver')
 
 -- 定义 include 路径查找函数
 local function get_cpp_include_paths()
@@ -138,96 +190,7 @@ local function get_cpp_include_paths()
     end
   end
   
-  -- 添加常见的系统 include 路径
-  local common_paths = {
-    '/usr/include',
-    '/usr/local/include',
-    '/usr/include/c++/*',
-    '/usr/include/x86_64-linux-gnu',
-    '/usr/include/x86_64-linux-gnu/c++/*',
-  }
-  
-  for _, path in ipairs(common_paths) do
-    if path:find('%*') then
-      -- 处理通配符路径
-      local expanded = vim.fn.glob(path, false, true)
-      for _, exp in ipairs(expanded) do
-        if vim.fn.isdirectory(exp) == 1 then
-          table.insert(include_paths, exp)
-        end
-      end
-    else
-      if vim.fn.isdirectory(path) == 1 then
-        table.insert(include_paths, path)
-      end
-    end
-  end
-  
   return include_paths
-end
-
--- clangd 配置（修复重复定义问题）
-setup_lsp('clangd', {
-  cmd = {
-    "clangd",
-    "--background-index",
-    "--clang-tidy",
-    "--header-insertion=iwyu",
-    "--completion-style=detailed",
-    "--function-arg-placeholders",
-    "--fallback-style=Google",
-  },
-  init_options = {
-    usePlaceholders = true,
-    completeUnimported = true,
-    clangdFileStatus = true,
-  },
-  capabilities = capabilities,
-  on_attach = function(client, bufnr)
-    -- 设置快捷键
-    local bufopts = { noremap=true, silent=true, buffer=bufnr }
-    vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, bufopts)
-    vim.keymap.set('n', 'gd', vim.lsp.buf.definition, bufopts)
-    vim.keymap.set('n', 'K', vim.lsp.buf.hover, bufopts)
-    vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, bufopts)
-    vim.keymap.set('n', 'gr', vim.lsp.buf.references, bufopts)
-    vim.keymap.set('n', '<space>rn', vim.lsp.buf.rename, bufopts)
-    
-    -- 添加 C++ 特定的 include 路径
-    local include_paths = get_cpp_include_paths()
-    if #include_paths > 0 then
-      -- 通知 clangd 添加 include 路径
-      client.notify('workspace/didChangeConfiguration', {
-        settings = {
-          clangd = {
-            arguments = { '-I' .. table.concat(include_paths, ' -I') }
-          }
-        }
-      })
-    end
-  end,
-  settings = {
-    clangd = {
-      -- 添加 include 路径
-      arguments = vim.tbl_flatten({
-        "-I.",
-        vim.tbl_map(function(path) return "-I" .. path end, get_cpp_include_paths())
-      }),
-    }
-  }
-})
-
--- 其他 LSP 服务器配置（如果需要）
-local servers = {
-  'pyright',      -- Python
-  'tsserver',     -- TypeScript/JavaScript
-  'rust_analyzer', -- Rust
-  'gopls',        -- Go
-  'cmake',        -- CMake
-}
-
-for _, server in ipairs(servers) do
-  setup_lsp(server)
 end
 
 -- 添加项目根目录检测功能
@@ -253,8 +216,6 @@ vim.api.nvim_create_autocmd({ "BufEnter", "DirChanged" }, {
     local root_dir = find_project_root()
     if root_dir ~= vim.fn.getcwd() then
       vim.notify("Project root: " .. root_dir, vim.log.levels.INFO)
-      -- 重新启动 clangd 来更新 include 路径
-      vim.cmd('LspRestart clangd')
     end
   end,
 })
@@ -271,20 +232,11 @@ vim.diagnostic.config({
 -- 添加 include 辅助函数
 vim.api.nvim_create_user_command('CppAddInclude', function(opts)
   local include_path = opts.args
-  local bufnr = vim.api.nvim_get_current_buf()
-  local clients = vim.lsp.get_active_clients({ bufnr = bufnr, name = 'clangd' })
-  if #clients > 0 then
-    clients[1].notify('workspace/didChangeConfiguration', {
-      settings = {
-        clangd = {
-          arguments = { '-I' .. include_path }
-        }
-      }
-    })
-    vim.notify("Added include path: " .. include_path, vim.log.levels.INFO)
-  end
+  vim.notify("Added include path: " .. include_path .. " (manual)", vim.log.levels.INFO)
 end, {
   nargs = 1,
-  desc = 'Add include path to clangd',
+  desc = 'Add include path (manual)',
   complete = 'file'
 })
+
+print("Neovim config loaded successfully!")
