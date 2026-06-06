@@ -75,7 +75,6 @@ require("bufferline").setup({
     close_command = "bdelete! %d",
     right_mouse_command = "bdelete! %d",
     left_mouse_command = "buffer %d",
-    middle_mouse_command = nil,
     indicator = {
       icon = '▎',
       style = 'icon',
@@ -203,7 +202,7 @@ require('mason-lspconfig').setup({
     'clangd',
     'lua_ls',
     'pylsp',
-    'tsserver',
+    'ts_ls',        -- 注意：使用 ts_ls 而不是 tsserver
     'jsonls',
     'yamlls',
   },
